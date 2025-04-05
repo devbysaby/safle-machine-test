@@ -1,34 +1,53 @@
-// scripts/deploy.js
-
 const { ethers } = require("hardhat");
 
+// Deploys the BatchTransactionContract.
 async function deployBatchTransactionContract() {
-    const BatchTransactionContract = await ethers.getContractFactory("BatchTransactionContract");
-    const batchTransactionContract = await BatchTransactionContract.deploy();
-    await batchTransactionContract.waitForDeployment();
-    console.log(`BatchTransactionContract deployed to: ${batchTransactionContract.target}`);
+    try {
+        const BatchTransactionContract = await ethers.getContractFactory("BatchTransactionContract");
+        const batchTransactionContract = await BatchTransactionContract.deploy();
+        await batchTransactionContract.waitForDeployment();
+        console.log(`✅ BatchTransactionContract deployed to: ${batchTransactionContract.target}`);
+    } catch (error) {
+        console.error("❌ Error deploying BatchTransactionContract:", error);
+    }
 }
 
-async function deployMockContracts(){
-    const MockToken = await ethers.getContractFactory("MockToken");
-    const mockToken = await MockToken.deploy();
-    await mockToken.waitForDeployment();
-    console.log(`MockToken deployed to: ${mockToken.target}`);
+// Deploys MockToken and SimpleStorage contracts concurrently for optimization.
+async function deployMockContracts() {
+    try {
+        const [MockToken, SimpleStorage] = await Promise.all([
+            ethers.getContractFactory("MockToken"),
+            ethers.getContractFactory("SimpleStorage")
+        ]);
 
-    const SimpleStorage = await ethers.getContractFactory("SimpleStorage");
-    const simpleStorage = await SimpleStorage.deploy();
-    await simpleStorage.waitForDeployment();
-    console.log(`SimpleStorage deployed to: ${simpleStorage.target}`);
+        const [mockToken, simpleStorage] = await Promise.all([
+            MockToken.deploy(),
+            SimpleStorage.deploy()
+        ]);
+
+        await Promise.all([mockToken.waitForDeployment(), simpleStorage.waitForDeployment()]);
+
+        console.log(`✅ MockToken deployed to: ${mockToken.target}`);
+        console.log(`✅ SimpleStorage deployed to: ${simpleStorage.target}`);
+    } catch (error) {
+        console.error("❌ Error deploying Mock Contracts:", error);
+    }
 }
 
+// Deploy all contracts and handle errors.
 async function main() {
-   await deployBatchTransactionContract();
-   await deployMockContracts();
+    console.log("🚀 Starting deployment...");
+
+    await deployBatchTransactionContract();
+    await deployMockContracts();
+
+    console.log("🎉 Deployment completed successfully.");
 }
 
 main()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error(error);
+    console.error("❌ Uncaught Error in Deployment:", error);
     process.exit(1);
   });
+
