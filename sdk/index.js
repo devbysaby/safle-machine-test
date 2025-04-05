@@ -213,7 +213,10 @@ module.exports = class BatchTransactionSDK {
       const approvePromises = Object.entries(this.approvalTransactionsList).map(
         async ([tokenAddress, requiredApproval]) => {
           try {
-            const tokenContract = await this.getContractInstance(tokenAddress, ERC20ABI);
+            const tokenContract = await this.getContractInstance(
+              tokenAddress,
+              ERC20ABI
+            );
             const allowance = await tokenContract.allowance(
               await this.signer.getAddress(),
               this.batchContract.address
@@ -226,7 +229,10 @@ module.exports = class BatchTransactionSDK {
               );
             }
           } catch (error) {
-            console.error(`Error processing approval for token ${tokenAddress}:`, error.message);
+            console.error(
+              `Error processing approval for token ${tokenAddress}:`,
+              error.message
+            );
             throw error;
           }
         }
@@ -234,9 +240,9 @@ module.exports = class BatchTransactionSDK {
 
       await Promise.all(approvePromises);
 
-      const targets = this.transactionList.map(tx => tx.target);
-      const values = this.transactionList.map(tx => tx.value);
-      const data = this.transactionList.map(tx => tx.data);
+      const targets = this.transactionList.map((tx) => tx.target);
+      const values = this.transactionList.map((tx) => tx.value);
+      const data = this.transactionList.map((tx) => tx.data);
 
       const totalValue = values
         .reduce((acc, value) => acc.plus(value.toString()), new BigNumber(0))
@@ -251,6 +257,70 @@ module.exports = class BatchTransactionSDK {
       return tx;
     } catch (error) {
       console.error("Error executing batch transaction:", error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Estimate gas for executing all transactions as a batch through the batch contract.
+   */
+  async estimateGasForBatchTransaction() {
+    try {
+      if (this.transactionList.length === 0) {
+        throw new Error("Transaction list is empty");
+      }
+
+      const approvePromises = Object.entries(this.approvalTransactionsList).map(
+        async ([tokenAddress, requiredApproval]) => {
+          try {
+            const tokenContract = await this.getContractInstance(
+              tokenAddress,
+              ERC20ABI
+            );
+            const allowance = await tokenContract.allowance(
+              await this.signer.getAddress(),
+              this.batchContract.address
+            );
+
+            if (new BigNumber(allowance.toString()).lt(requiredApproval)) {
+              return tokenContract.estimateGas.approve(
+                this.batchContract.address,
+                requiredApproval.toFixed()
+              );
+            }
+          } catch (error) {
+            console.error(
+              `Error estimating approval gas for token ${tokenAddress}:`,
+              error.message
+            );
+            throw error;
+          }
+        }
+      );
+
+      await Promise.all(approvePromises);
+
+      const targets = this.transactionList.map((tx) => tx.target);
+      const values = this.transactionList.map((tx) => tx.value);
+      const data = this.transactionList.map((tx) => tx.data);
+
+      const totalValue = values
+        .reduce((acc, value) => acc.plus(value.toString()), new BigNumber(0))
+        .toFixed();
+
+      const estimatedGas = await this.batchContract.estimateGas.executeBatch(
+        targets,
+        data,
+        values,
+        { value: totalValue }
+      );
+
+      return estimatedGas;
+    } catch (error) {
+      console.error(
+        "Error estimating gas for batch transaction:",
+        error.message
+      );
       throw error;
     }
   }

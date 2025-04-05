@@ -182,6 +182,16 @@ This clears all the transactions currently held in memory.
 
 ---
 
+### **Estimate Gas Usage**
+
+The function estimates the gas required to execute the current batch transaction. This includes the additional Approval transactions too.
+
+```javascript
+sdk.estimateGasForBatchTransaction();
+```
+
+---
+
 ## Executing Batch Transaction
 
 Once all desired transactions are added to the list, you can execute them in a single batch transaction. This operation sends all included transactions as a single transaction to the network, potentially reducing gas costs and improving efficiency.

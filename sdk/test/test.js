@@ -124,4 +124,48 @@ describe("BatchTransactionSDK Test Suite", () => {
     const latestValue = await simpleStorage.get();
     expect(latestValue.toString()).to.equal("126");
   });
+
+  it("Should estimate gas for a batch transaction", async function () {
+    const recipients = [
+      ethers.Wallet.createRandom().address,
+      ethers.Wallet.createRandom().address,
+    ];
+
+    const valuesToSet = [42, 84, 126];
+    const encodedCalls = valuesToSet.map((value) =>
+      simpleStorage.interface.encodeFunctionData("set", [value])
+    );
+
+    // Adding ETH transfer transactions to the batch
+    recipients.forEach((recipient) => {
+      sdk.addTransactionToList(
+        recipient,
+        ethers.utils.parseEther("0.01"),
+        "0x"
+      );
+    });
+
+    // Adding ERC20 transfer transactions to the batch
+    for (let recipient of recipients) {
+      await sdk.addERC20Transfer(mockToken.address, recipient, transferAmount);
+    }
+
+    // Adding contract interactions to the batch
+    encodedCalls.forEach((encodedCall) => {
+      sdk.addTransactionToList(
+        simpleStorage.address,
+        ethers.utils.parseEther("0.001").toString(),
+        encodedCall
+      );
+    });
+
+    // Estimate gas for the batch transaction
+    const estimatedGas = await sdk.estimateGasForBatchTransaction();
+    console.log("Estimated Gas for Batch Transaction:", estimatedGas.toString());
+
+    // Verify that the estimated gas is a valid number
+    expect(estimatedGas).to.be.a('object');
+    expect(estimatedGas.gt(0)).to.be.true;
+});
+
 });
