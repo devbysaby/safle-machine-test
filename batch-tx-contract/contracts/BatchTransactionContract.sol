@@ -2,7 +2,6 @@
 pragma solidity ^0.8.28;
 
 contract BatchTransactionContract {
-    
     // Event emitted after each operation is executed
     event OperationExecuted(address indexed target, bool success, bytes data);
 
@@ -33,11 +32,15 @@ contract BatchTransactionContract {
 
         for (uint256 i = 0; i < targets.length; i++) {
             // Perform each call
-            (success[i], results[i]) = targets[i].call{value: amount[i]}(data[i]);
+            (success[i], results[i]) = targets[i].call{value: amount[i]}(
+                data[i]
+            );
 
             // If any transaction fails, revert the entire batch
             if (!success[i]) {
-                revert("One of the transactions failed. Reverting all transactions.");
+                revert(
+                    "One of the transactions failed. Reverting all transactions."
+                );
             }
 
             emit OperationExecuted(targets[i], success[i], results[i]);
